@@ -5,7 +5,7 @@ include 'GPSDistance.php';
 
 $center = [52.09691672548126, 5.0807821349173965]; // Utrecht - Douwe Egberts
 $radius = 8.15; // km radius around 'center'
-$lastHours = 4; // get data from last n hours
+$lastHours = 12; // get data from last n hours
 $deltaTempAllert = 5.0; // allert (red) range in °C
 $url = 'https://meetjestad.net/data/?type=sensors&format=json';
 
@@ -35,44 +35,52 @@ foreach ($measurements as $measurement) {
     $dist = distance($center[0], $center[1], $location[0], $location[1]);
     if ($dist < $radius) {
       $nodes[$measurement->id] = $measurement;
-      $temperatures[] = $measurement->temperature;
+      $temperatures[$measurement->id] = $measurement->temperature;
     }
   }
 }
 
 $diff = $end_date->diff($start_date);
+$medianTemp = median($temperatures);
 
 echo ("\e[90m" . $url . "\e[0m\n");
 echo ("Results: " .  sizeof($measurements) . " measurements in the last " . $diff->format("%h hour(s)") . "\n");
 echo ("Utrecht: " .  sizeof($nodes) . " nodes\n");
-echo ("Temperature median: " . number_format(median($temperatures), 2, ',', '') . "°C\n");
+echo ("Temperature median: " . number_format($medianTemp, 2, ',', '') . "°C\n");
 echo ("\e[90mTemperature average: " . number_format(average($temperatures), 2, ',', '') . "°C\e[0m\n");
 
 ksort($nodes);
 foreach ($nodes as $key => $node) {
-  $delta_temp = $node->temperature - median($temperatures);
+  $delta_temp = $node->temperature - $medianTemp;
   $color = abs($delta_temp) > $deltaTempAllert ? "[31m" : "[32m";
-  $firmware = array_key_exists('firmware_version', $node) ? $node->firmware_version : '?';
-  printf("%4s - ", $key);
-  echo ($firmware . ' - ' . number_format($node->temperature, 4, ',', '') . "°C \e" . $color . ' ∆ ' . number_format($delta_temp, 2, ',', '') . "°C \e[0m \n");
+  $firmware = array_key_exists('firmware_version', $node) ? $node->firmware_version : 0;
+  $fwv = sprintf("%02X", $firmware);
+  printf("%4s | ", $key);
+  echo ( $fwv . ' | ' . number_format($node->temperature, 4, ',', '') . "°C\t\e" . $color . ' ∆ ' . number_format($delta_temp, 2, ',', '') . "°C \e[0m \n");
 }
 
-/* Get the median of a given array of numbers */
+/*
+ * Get the median of a given array of numbers
+ * 
+ */
 function median($numbers)
 {
   sort($numbers);
-  $count = sizeof($numbers);   // cache the count
-  $index = floor($count / 2);  // cache the index
+  $count = sizeof($numbers);
+  $index = floor($count / 2);
   if (!$count) {
     return NULL;
-  } elseif ($count & 1) {    // count is odd
+  } elseif ($count & 1) {
     return $numbers[$index];
-  } else {                   // count is even
+  } else {
     return ($numbers[$index - 1] + $numbers[$index]) / 2;
   }
 }
 
-/* Get the average of a given array of numbers */
+/*
+ * Get the average of a given array of numbers
+ * 
+ */
 function average($numbers)
 {
   $sum = 0;
