@@ -5,7 +5,7 @@ include 'GPSDistance.php';
 
 $center = [52.09691672548126, 5.0807821349173965]; // Utrecht - Douwe Egberts
 $radius = 8.15; // km radius around 'center'
-$lastHours = 12; // get data from last n hours
+$lastHours = 1; // get data from last n hours
 $deltaTempAllert = 5.0; // allert (red) range in °C
 $url = 'https://meetjestad.net/data/?type=sensors&format=json';
 
@@ -50,13 +50,13 @@ echo ("Temperature median: " . number_format($medianTemp, 2, ',', '') . "°C\n")
 echo ("\e[90mTemperature average: " . number_format(average($temperatures), 2, ',', '') . "°C\e[0m\n");
 
 ksort($nodes);
-foreach ($nodes as $key => $node) {
+foreach ($nodes as $nid => $node) {
   $delta_temp = $node->temperature - $medianTemp;
   $color = abs($delta_temp) > $deltaTempAllert ? "[31m" : "[32m";
   $firmware = array_key_exists('firmware_version', $node) ? $node->firmware_version : 0;
   $fwv = sprintf("%02X", $firmware);
-  printf("%4s | ", $key);
-  echo ( $fwv . ' | ' . number_format($node->temperature, 4, ',', '') . "°C\t\e" . $color . ' ∆ ' . number_format($delta_temp, 2, ',', '') . "°C \e[0m \n");
+  printf("\e\033[1m%4s\e\033[0m | ", $nid); // id in bold
+  echo ( $fwv . ' | ' . number_format($node->temperature, 4, '.', '') . "°C\t\e" . $color . ' ∆ ' . sprintf("%+G", number_format($delta_temp, 2, '.', '')) . "°C \e[0m \n");
 }
 
 /*
